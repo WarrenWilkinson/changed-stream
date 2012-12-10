@@ -121,9 +121,9 @@ If you have problems, see the [[#support][support]] section, otherwise you may w
 
 ** Manual Installation
 
-In summary: Untar the package and then symlink the .asd files into a place where ASDF can find them. 
+In summary: Untar the [[https://github.com/WarrenWilkinson/changed-stream/archive/master.tar.gz][.tar]] package and then symlink the .asd files into a place where ASDF can find them. 
 
-  1. Untar the files where you want them to be.  On windows download the .zip and unzip it instead, it's the same files.
+  1. Untar the files where you want them to be.  On windows download the [[https://github.com/WarrenWilkinson/changed-stream/archive/master.zip][.zip]] and unzip it instead, it's the same files.
   2. ASDF could be looking anywhere -- it depends on your setup.  Run this in your lisp repl to get a clue
      as to where ASDF is seeking libraries[fn:: you might need to (require 'asdf) before running this example]:
 
@@ -168,31 +168,428 @@ of this document.
    :CUSTOM-ID:  support
    :END:
 
-* Implementation
+You can find support on this libraries [[http://warrenwilkinson.ca/changed-stream][website]] and/or [[https://github.com/WarrenWilkinson/changed-stream][github]] repository. Or you can email [[mailto:warrenwilkinson@gmail.com][Warren Wilkinson]].
 
 * Tests 
 
-Lets display the test coverage properties, this needs some nice graphics of
-  * Scanning
-  * Peeking
-  * Seeking
-  * Back Seeking
-  * Back seek with reads
-  * Sequences 
+This package is tested by changing the string '01234567890ABCDEF' in a 
+known way and then verifying that the results are correct no matter
+how it's read.
 
+we test these reading patterns:
+ 
+ * Scanning :: read-char the entire stream.
+
+ * Peeking :: read-char the entire stream, but peek-char before reading.
+
+ * Seeking :: file-position to the next character then read it, then next char, then ...
+  
+ * Backwards Seeking :: File-position to the last character, then read it, then next-to-last, then ...
+ 
+ * Backwards Seeking with Forward Scanning :: File-position to the last character, then scan stream, then next-to-last, then ...
+
+ * With read-sequence :: For i from 0 to end, and j from i to end, use file-position and read-sequence to read the range i to j.
+
+** Deletion Tests
+
+#+TBL_NAME: identity_test
+|------+----------+---+--------------------+-------------------------------------|
+| *at* | *delete* |   | *is*               | *Comments*                          |
+|------+----------+---+--------------------+-------------------------------------|
+|    0 |        0 |   | ~0123456789ABCDEF~ | No changes returns original stream. |
+|------+----------+---+--------------------+-------------------------------------|
+|    0 |        1 |   | ~123456789ABCDEF~  |                                     |
+|    0 |        2 |   | ~23456789ABCDEF~   |                                     |
+|    0 |        3 |   | ~3456789ABCDEF~    |                                     |
+|    0 |        8 |   | ~89ABCDEF~         |                                     |
+|    0 |        9 |   | ~9ABCDEF~          |                                     |
+|    0 |       15 |   | ~F~                |                                     |
+|    0 |       16 |   |                    |                                     |
+|    0 |       17 |   |                    |                                     |
+|    0 |       18 |   |                    |                                     |
+|------+----------+---+--------------------+-------------------------------------|
+|    1 |        1 |   | ~023456789ABCDEF~  |                                     |
+|    1 |        2 |   | ~03456789ABCDEF~   |                                     |
+|    1 |        3 |   | ~0456789ABCDEF~    |                                     |
+|    1 |        7 |   | ~089ABCDEF~        |                                     |
+|    1 |       13 |   | ~0EF~              |                                     |
+|    1 |       14 |   | ~0F~               |                                     |
+|    1 |       15 |   | ~0~                |                                     |
+|    1 |       16 |   | ~0~                |                                     |
+|    1 |       17 |   | ~0~                |                                     |
+|------+----------+---+--------------------+-------------------------------------|
+|    2 |        1 |   | ~013456789ABCDEF~  |                                     |
+|    2 |        2 |   | ~01456789ABCDEF~   |                                     |
+|    2 |        7 |   | ~019ABCDEF~        |                                     |
+|    2 |       13 |   | ~01F~              |                                     |
+|    2 |       14 |   | ~01~               |                                     |
+|    2 |       15 |   | ~01~               |                                     |
+|------+----------+---+--------------------+-------------------------------------|
+|    8 |        1 |   | ~012345679ABCDEF~  |                                     |
+|    8 |        2 |   | ~01234567ABCDEF~   |                                     |
+|    8 |        7 |   | ~01234567F~        |                                     |
+|    8 |        8 |   | ~01234567~         |                                     |
+|    8 |        9 |   | ~01234567~         |                                     |
+|------+----------+---+--------------------+-------------------------------------|
+|   14 |        1 |   | ~0123456789ABCDF~  |                                     |
+|   14 |        2 |   | ~0123456789ABCD~   |                                     |
+|   14 |        3 |   | ~0123456789ABCD~   |                                     |
+|------+----------+---+--------------------+-------------------------------------|
+|   15 |        1 |   | ~0123456789ABCDE~  |                                     |
+|   15 |        2 |   | ~0123456789ABCDE~  |                                     |
+|------+----------+---+--------------------+-------------------------------------|
+|   16 |        1 |   | ~0123456789ABCDEF~ |                                     |
+|   16 |        2 |   | ~0123456789ABCDEF~ |                                     |
+|------+----------+---+--------------------+-------------------------------------|
+|   17 |        1 |   | ~0123456789ABCDEF~ |                                     |
+|------+----------+---+--------------------+-------------------------------------|
+
+** Insertion Tests
+
+|------+---+----------------------+--------------------------------------+------------|
+| *at* |   | *insert*             | *is*                                 | *Comments* |
+|------+---+----------------------+--------------------------------------+------------|
+|    0 |   | ~x~                  | ~x0123456789ABCDEF~                  |            |
+|    0 |   | ~xy~                 | ~xy0123456789ABCDEF~                 |            |
+|    0 |   | ~)!@#$%^&*(abcdef~   | ~)!@#$%^&*(abcdef0123456789ABCDEF~   |            |
+|    0 |   | ~)!@#$%^&*(abcdef+~  | ~)!@#$%^&*(abcdef+0123456789ABCDEF~  |            |
+|    0 |   | ~)!@#$%^&*(abcdef+-~ | ~)!@#$%^&*(abcdef+-0123456789ABCDEF~ |            |
+|------+---+----------------------+--------------------------------------+------------|
+|    1 |   | ~x~                  | ~0x123456789ABCDEF~                  |            |
+|    1 |   | ~xy~                 | ~0xy123456789ABCDEF~                 |            |
+|    1 |   | ~)!@#$%^&*(abcdef~   | ~0)!@#$%^&*(abcdef123456789ABCDEF~   |            |
+|    1 |   | ~)!@#$%^&*(abcdef+~  | ~0)!@#$%^&*(abcdef+123456789ABCDEF~  |            |
+|------+---+----------------------+--------------------------------------+------------|
+|    2 |   | ~x~                  | ~01x23456789ABCDEF~                  |            |
+|    2 |   | ~xy~                 | ~01xy23456789ABCDEF~                 |            |
+|    2 |   | ~)!@#$%^&*(abcdef~   | ~01)!@#$%^&*(abcdef23456789ABCDEF~   |            |
+|    2 |   | ~)!@#$%^&*(abcdef+~  | ~01)!@#$%^&*(abcdef+23456789ABCDEF~  |            |
+|------+---+----------------------+--------------------------------------+------------|
+|    8 |   | ~x~                  | ~01234567x89ABCDEF~                  |            |
+|    8 |   | ~xy~                 | ~01234567xy89ABCDEF~                 |            |
+|    8 |   | ~)!@#$%^&*(abcdef~   | ~01234567)!@#$%^&*(abcdef89ABCDEF~   |            |
+|    8 |   | ~)!@#$%^&*(abcdef+~  | ~01234567)!@#$%^&*(abcdef+89ABCDEF~  |            |
+|------+---+----------------------+--------------------------------------+------------|
+|   14 |   | ~x~                  | ~0123456789ABCDxEF~                  |            |
+|   14 |   | ~xy~                 | ~0123456789ABCDxyEF~                 |            |
+|   14 |   | ~)!@#$%^&*(abcdef~   | ~0123456789ABCD)!@#$%^&*(abcdefEF~   |            |
+|   14 |   | ~)!@#$%^&*(abcdef+~  | ~0123456789ABCD)!@#$%^&*(abcdef+EF~  |            |
+|------+---+----------------------+--------------------------------------+------------|
+|   15 |   | ~x~                  | ~0123456789ABCDExF~                  |            |
+|   15 |   | ~xy~                 | ~0123456789ABCDExyF~                 |            |
+|   15 |   | ~)!@#$%^&*(abcdef~   | ~0123456789ABCDE)!@#$%^&*(abcdefF~   |            |
+|   15 |   | ~)!@#$%^&*(abcdef+~  | ~0123456789ABCDE)!@#$%^&*(abcdef+F~  |            |
+|------+---+----------------------+--------------------------------------+------------|
+|   16 |   | ~x~                  | ~0123456789ABCDEFx~                  |            |
+|   16 |   | ~xy~                 | ~0123456789ABCDEFxy~                 |            |
+|   16 |   | ~)!@#$%^&*(abcdef~   | ~0123456789ABCDEF)!@#$%^&*(abcdef~   |            |
+|   16 |   | ~)!@#$%^&*(abcdef+~  | ~0123456789ABCDEF)!@#$%^&*(abcdef+~  |            |
+|------+---+----------------------+--------------------------------------+------------|
+|   17 |   | ~x~                  | ~0123456789ABCDEF~                   |            |
+|   18 |   | ~x~                  | ~0123456789ABCDEF~                   |            |
+|   20 |   | ~x~                  | ~0123456789ABCDEF~                   |            |
+|------+---+----------------------+--------------------------------------+------------|
+
+** Replacement Tests
+
+|------+----------+----------------------+----------------------+------------|
+| *at* | *delete* | *insert*             | *is*                 | *Comments* |
+|------+----------+----------------------+----------------------+------------|
+|    0 |        1 | ~)~                  | ~)123456789ABCDEF~   |            |
+|    0 |        2 | ~)!~                 | ~)!23456789ABCDEF~   |            |
+|    0 |        8 | ~)!@#$%^&~           | ~)!@#$%^&89ABCDEF~   |            |
+|    0 |       14 | ~)!@#$%^&*(abcd~     | ~)!@#$%^&*(abcdEF~   |            |
+|    0 |       15 | ~)!@#$%^&*(abcde~    | ~)!@#$%^&*(abcdeF~   |            |
+|    0 |       16 | ~)!@#$%^&*(abcdef~   | ~)!@#$%^&*(abcdef~   |            |
+|    0 |       17 | ~)!@#$%^&*(abcdefg~  | ~)!@#$%^&*(abcdefg~  |            |
+|    0 |       18 | ~)!@#$%^&*(abcdefgh~ | ~)!@#$%^&*(abcdefgh~ |            |
+|------+----------+----------------------+----------------------+------------|
+|    1 |        1 | ~!~                  | ~0!23456789ABCDEF~   |            |
+|    1 |        8 | ~!@#$%^&*~           | ~0!@#$%^&*9ABCDEF~   |            |
+|    1 |       14 | ~!@#$%^&*(abcde~     | ~0!@#$%^&*(abcdeF~   |            |
+|    1 |       15 | ~!@#$%^&*(abcdef~    | ~0!@#$%^&*(abcdef~   |            |
+|    1 |       16 | ~!@#$%^&*(abcdefg~   | ~0!@#$%^&*(abcdefg~  |            |
+|    1 |       17 | ~!@#$%^&*(abcdefgh~  | ~0!@#$%^&*(abcdefgh~ |            |
+|------+----------+----------------------+----------------------+------------|
+|    8 |        1 | ~*~                  | ~01234567*9ABCDEF~   |            |
+|    8 |        7 | ~*(abcde~            | ~01234567*(abcdeF~   |            |
+|    8 |        8 | ~*(abcdef~           | ~01234567*(abcdef~   |            |
+|    8 |        9 | ~*(abcdefg~          | ~01234567*(abcdefg~  |            |
+|------+----------+----------------------+----------------------+------------|
+|   14 |        1 | ~e~                  | ~0123456789ABCDeF~   |            |
+|   14 |        2 | ~ef~                 | ~0123456789ABCDef~   |            |
+|   14 |        3 | ~efg~                | ~0123456789ABCDefg~  |            |
+|------+----------+----------------------+----------------------+------------|
+|   15 |        1 | ~f~                  | ~0123456789ABCDEf~   |            |
+|   15 |        2 | ~fg~                 | ~0123456789ABCDEfg~  |            |
+|------+----------+----------------------+----------------------+------------|
+|   16 |        1 | ~g~                  | ~0123456789ABCDEFg~  |            |
+|   16 |        2 | ~gh~                 | ~0123456789ABCDEFgh~ |            |
+|------+----------+----------------------+----------------------+------------|
+
+** Replace+Delete Tests
+
+|------+----------+----------+---------------------+------------|
+| *at* | *delete* | *insert* | *is*                | *Comments* |
+|------+----------+----------+---------------------+------------|
+|    0 |        2 | ~)~      | ~)23456789ABCDEF~   |            |
+|    0 |        4 | ~)!~     | ~)!456789ABCDEF~    |            |
+|    0 |        8 | ~)!@#~   | ~)!@#89ABCDEF~      |            |
+|    0 |       15 | ~)!~     | ~)!F~               |            |
+|    0 |       16 | ~)!~     | ~)!~                |            |
+|    0 |       17 | ~)!~     | ~)!~                |            |
+|------+----------+----------+---------------------+------------|
+|    1 |        2 | ~)~      | ~0)3456789ABCDEF~   |            |
+|    1 |       14 | ~)~      | ~0)F~               |            |
+|    1 |       15 | ~)~      | ~0)~                |            |
+|    1 |       16 | ~)~      | ~0)~                |            |
+|------+----------+----------+---------------------+------------|
+|   13 |        2 | ~)~      | ~0123456789ABC)F~   |            |
+|   14 |        2 | ~)~      | ~0123456789ABCD)~   |            |
+|   15 |        2 | ~)~      | ~0123456789ABCDE)~  |            |
+|   16 |        2 | ~)~      | ~0123456789ABCDEF)~ |            |
+|   17 |        2 | ~)~      | ~0123456789ABCDEF~  |            |
+|------+----------+----------+---------------------+------------|
+
+** Replace+Insert Tests
+
+|------+----------+-----------------------+----------------------------+------------|
+| *at* | *delete* | *insert*              | *is*                       | *Comments* |
+|------+----------+-----------------------+----------------------------+------------|
+|    0 |        1 | ~)!~                  | ~)!123456789ABCDEF~        |            |
+|    0 |        2 | ~)!@#~                | ~)!@#23456789ABCDEF~       |            |
+|    0 |        4 | ~)!@#$%^&~            | ~)!@#$%^&456789ABCDEF~     |            |
+|    0 |        8 | ~)!@#$%^&*(abcdef~    | ~)!@#$%^&*(abcdef89ABCDEF~ |            |
+|    0 |       15 | ~)!@#$%^&*(abcdefxyz~ | ~)!@#$%^&*(abcdefxyzF~     |            |
+|    0 |       16 | ~)!@#$%^&*(abcdefxyz~ | ~)!@#$%^&*(abcdefxyz~      |            |
+|    0 |       17 | ~)!@#$%^&*(abcdefxyz~ | ~)!@#$%^&*(abcdefxyz~      |            |
+|------+----------+-----------------------+----------------------------+------------|
+|    1 |        1 | ~)!~                  | ~0)!23456789ABCDEF~        |            |
+|    1 |        2 | ~)!@#~                | ~0)!@#3456789ABCDEF~       |            |
+|------+----------+-----------------------+----------------------------+------------|
+|   13 |        1 | ~)!~                  | ~0123456789ABC)!EF~        |            |
+|   14 |        1 | ~)!~                  | ~0123456789ABCD)!F~        |            |
+|   15 |        1 | ~)!~                  | ~0123456789ABCDE)!~        |            |
+|   16 |        1 | ~)!~                  | ~0123456789ABCDEF)!~       |            |
+|   17 |        1 | ~)!~                  | ~0123456789ABCDEF~         |            |
+|------+----------+-----------------------+----------------------------+------------|
+
+* Implementation
+
+A changed stream has five zones:
+  
+  * 1. Before :: The area before our changes.
+  * 2. Replace :: The range were our changes overwrite the source.
+  * 3. Delete :: The range where we are deleting (not emitting) source characters.
+  * 4. Insert :: The range where we are outputing new characters, but not consuming source characters.
+  * 5. After :: The area after our changes. 
+
+We never have both delete and insert, instead we'd represent that as a replace and insert or a replace and delete.
+
+** diffcase
+
+The changed-stream class is designed to support a macro called 'diffcase'. This macro is like a case statement,
+but supports these five parts.  Most of the stream functions use this macro.
+
+#+BEGIN_SRC lisp
+  (defmacro diffcase ((position stream)
+                      (before &rest before-case-code)
+                      (replace &rest replace-case-code)
+                      (delete &rest delete-case-code)
+                      (insert &rest insert-case-code)
+                      (after &rest after-case-code))
+    (declare (ignore before replace delete insert after))
+    (let ((pos (gensym)) (strm (gensym)))
+      `(let ((,pos ,position) (,strm ,stream))
+         (cond ((< ,pos (last-unchanged-position ,strm)) ,@before-case-code)
+               ((< ,pos (last-replacement-position ,strm)) ,@replace-case-code)
+               ((< ,pos (last-modified-position ,strm))
+                (if (mod-is-delete-p ,strm)
+                    (progn ,@delete-case-code)
+                    (progn ,@insert-case-code)))
+               (t ,@after-case-code)))))
+#+END_SRC
+
+*** changed-stream class
+
+The class support the macros, and the macro cares about character positions: At what position is the
+first change?  At what position is the last replacement?  And where is the last modification!
+
+The class stores these precomputed values so we don't have to add our change-position to the minimum of 
+the length of the insert string vs the number of deleted characters -- we know this number,
+it's 'last-replacement-position'.
+
+#+BEGIN_SRC lisp
+  (defclass changed-stream (fundamental-character-input-stream)
+    ((stream                    :initarg  :stream                    
+                                :reader stream-of)
+     (virtual-position          :initform 0
+                                :accessor virtual-position)
+     (last-unchanged-position   :initarg  :last-unchanged-position  
+                                :reader last-unchanged-position)
+     (last-replacement-position :initarg  :last-replacement-position 
+                                :reader last-replacement-position)
+     (last-modified-position    :initarg  :last-modified-position    
+                                :reader last-modified-position)
+     (removed-characters        :initarg  :removed-characters        
+                                :reader removed-characters)
+     (insert-string             :initarg  :string  
+                                :reader insert-string)))
+  
+  (defun mod-is-delete-p (stream) (> (removed-characters stream) 0))
+  
+  (defun change-stream (stream &key (at 0) (insert "") (delete 0))
+    (assert (zerop (file-position stream)))
+    (let ((last-replace (+ at (min (length insert) delete)))
+          (last-mod (+ at (max delete (length insert)))))
+      (make-instance 'changed-stream
+         :stream stream
+         :last-unchanged-position at
+         :last-replacement-position last-replace
+         :last-modified-position last-mod
+         :removed-characters (- delete (length insert)) 
+         :string insert)))
+#+END_SRC
+
+** file-position
+
+When we set our own file-position, we have to compute the correct file-position to set the source stream too.
+This is easy during the before and replacement stages -- it's our current position.
+
+If we are repositioning into the delete range, the file-position of the source moved ahead by the number of characters
+to delete.
+
+If we are repositioning into the insert range, the file position of the source is just after the position of the last replaced character.
+When we start reading the source again, all the replaced characters will have been skipped. 
+
+If we are repositioning after the modification range, the file-position of the source moved ahead by the number of characters
+to delete. This takes into account the fact that these characters have been skipped and we are further in our source than
+we'd be otherwise. If our modification was insert+replace, then removed-characters will be negative and will put the file-position
+backwards. Since extra characters have been emitted, we're further back in the source stream.
+
+#+BEGIN_SRC lisp
+  (defmethod stream-file-position ((stream changed-stream) &optional newval)
+    (if newval 
+        (progn 
+          (diffcase (newval stream)
+             (before  (file-position (stream-of stream) newval))
+             (replace (file-position (stream-of stream) newval))
+             (delete  (file-position (stream-of stream)
+                                     (+ newval (removed-characters stream))))
+             (insert  (file-position (stream-of stream)
+                                     (last-replacement-position stream)))
+             (after   (file-position (stream-of stream)
+                                     (+ newval (removed-characters stream)))))
+          (setf (virtual-position stream) newval))
+        (virtual-position stream)))
+#+END_SRC
+
+** read-char
+   :PROPERTIES:
+   :CUSTOM-ID: read-char
+   :END:
+
+Real characters are characters from the source stream.  Replacement characters skip a source stream character and 
+return the next character from the insert stream (a virtual character).
+
+For deletes, we seek the end of the deleted characters and then emit the next.
+
+#+BEGIN_SRC lisp
+  (defmethod stream-read-char ((stream changed-stream))
+    (diffcase ((if (mod-is-delete-p stream)
+                   (file-position (stream-of stream))
+                   (virtual-position stream)) 
+               stream)
+       (before  (real-char stream))
+       (replace (replacement-char stream))
+       (delete  (internal-seek-end-of-delete stream) (real-char stream))
+       (insert (virtual-char stream))
+       (after  (real-char stream))))
+#+END_SRC
+
+** peek-char
+
+Similar in structure [[#read-char][read-char]], peek-char does the same operation but with peeks.  The replace region just takes
+the next virtual-char (rather than the replacement-char which would read and drop the next character from the source stream).
+
+#+BEGIN_SRC lisp
+  (defmethod stream-peek-char ((stream changed-stream))
+      (diffcase ((if (mod-is-delete-p stream)
+                     (file-position (stream-of stream))
+                     (virtual-position stream)) stream)
+        (before  (peek-char nil (stream-of stream) nil :eof))
+        (replace (virtual-char stream t))
+        (delete  (internal-seek-end-of-delete stream) 
+                 (peek-char nil (stream-of stream) nil :eof))
+        (insert  (virtual-char stream t))
+        (after   (peek-char nil (stream-of stream) nil :eof)))))
+#+END_SRC
+
+** read-sequence
+
+Read sequence is three functions, implemented as one for simplicity. But essentially:
+
+ 1. Read the sequence before the changes by calling read-sequence on the source stream. 
+ 2. Read the sequence during the changes by call-next-method (which will do it by calls to read-char)
+ 3. Read the sequence after the changes by calling read-sequence on the source stream.
+
+The complexity of this function comes from computing the correct start and end ranges for
+these three steps.
+
+#+BEGIN_SRC lisp
+  (defmethod stream-read-sequence ((stream changed-stream) seq &optional start end)
+    (let ((position (virtual-position stream)))
+      (let ((write-length (- (or end (length seq)) (or start 0))))
+        (let ((before-length (min write-length
+                              (max 0 (- (last-unchanged-position stream) position)))))
+          (read-sequence seq (stream-of stream)
+                         :start start
+                         :end (+ start before-length))
+          (incf start before-length)
+          (incf position before-length)
+          (decf write-length before-length)
+          (file-position stream position))
+        
+        (let ((during-length (min write-length 
+                              (max 0 (- (last-modified-position stream) position)))))
+          (call-next-method stream seq start (+ start during-length))
+          (incf start during-length)
+          (incf position during-length)
+          (decf write-length during-length))
+        
+        (let ((after-length write-length))
+          (read-sequence seq (stream-of stream)
+                         :start start
+                         :end (+ start after-length))
+          (incf start after-length)
+          (incf position after-length)
+          (decf write-length after-length)
+          (file-position stream position)))))
+  
+#+END_SRC
+
+** Test Framework
 * License
 
 Changed-stream is distributed under [[http://opensource.org/licenses/lgpl-2.1.php][LGPL2]] License. 
 
 
-* TODO Make it Tanglable.
+* TODO Document how the tests are implemented.
+* TODO Make it Tanglable (why?)
+
+Can I describe the code better than the code can? Are there important design decisions? ... Actually,
+DON'T include crap (the boiler plate). 
+
 * TODO package and release.
 * TODO Put version number in this file.
 * TODO Grab ASD descriptions from this file.
 * TODO Get an ebuild done.
 * TODO Get it onto quicklisp.
-* TODO Get a github account place to put this on.
-* TODO Link the tar and zip files into the manual.
-* TODO Populate the getting support part.
+* DONE Get a github account place to put this on.
+https://github.com/WarrenWilkinson/changed-stream
+* DONE Populate the getting support part.
+
 * TODO Get integration with cl-test-grid
 https://github.com/cl-test-grid/cl-test-grid
+
+* TODO Publish this as HTML and make it the projects webpage.
