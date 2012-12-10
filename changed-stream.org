@@ -1,0 +1,198 @@
+#+TITLE: changed-stream
+#+author: Warren Wilkinson
+
+# Repository: https://github.com/WarrenWilkinson/changed-stream
+
+* Overview 
+
+Changed-stream lets you apply changes to a stream, without modifying the underlying stream.
+In this example, stream s remains unmodified except for file-position[fn:: Changed-streams, like regular streams, aren't implicitly thread safe. But also ensure the underlying stream isn't being read concurrently.]. 
+
+#+begin_src lisp
+  (with-input-from-string (s "0123456789")
+    (let ((d (change-stream s
+                :at 3
+                :delete 1
+                :insert "xyz")))
+      (read-line d)))
+
+;; "012xyz456789"
+#+end_src
+
+...and changed streams are composable, but be aware of the order of operations. 
+
+#+BEGIN_LATEX
+\begin{figure}[htbp]
+  \begin{minipage}[b]{0.5\linewidth}
+    \centering
+
+#+END_LATEX
+
+#+begin_src lisp
+  (with-input-from-string
+    (s "The Cat in the Hat")
+    (read-line (change-stream 
+                (change-stream s
+                   :at 2
+                   :delete 6)
+                :at 12
+                :insert "chery")))
+  ;; "Thin the Hatchery"
+#+end_src
+
+#+BEGIN_LATEX
+  \end{minipage}
+  \hspace{0.5cm}
+  \begin{minipage}[b]{0.5\linewidth}
+    \centering
+#+END_LATEX
+
+#+begin_src lisp
+  (with-input-from-string
+    (s "The Cat in the Hat")
+    (read-line (change-stream 
+                (change-stream s
+                   :at 12
+                   :insert "chery")
+                :at 2
+                :delete 6)))
+  ;; "Thin tcheryhe Hat"
+#+end_src
+
+#+BEGIN_LATEX
+  \end{minipage}
+\end{figure}
+#+END_LATEX
+
+** Features
+
+   * read-char
+   * peek-char
+   * file-position
+   * read-sequence has been efficiently implemented.
+   * extending and shrinking the stream (deleting or inserting near the end will shrink and grow the stream).
+
+** Limitations
+
+  * The underlying stream must be at file-position 0 when the changed-stream is created. There is an assert to catch this.
+  * Thread safety is your responsibility -- in particular don't change the file-position of the underlying stream, the changed-stream will give incorrect results and could cause errors.
+  * unread-char has not been implemented (but peek-char has been)
+  * Read only. There are no writing operations allowed to the stream
+
+* Installation
+** Quick Lisp
+
+Install [[http://www.quicklisp.org/beta/][Quick Lisp]] and then run:
+
+#+BEGIN_SRC lisp
+(ql:quickload 'changed-stream)
+#+END_SRC
+
+If you have problems, see the [[#support][support]] section, and you may want to [[#runtests][run the tests]].
+
+** Gentoo
+
+As root, 
+
+#+BEGIN_SRC sh
+emerge changed-stream
+#+END_SRC
+
+Once the emerge is finished, the package can be loaded using ASDF:
+#+BEGIN_SRC lisp
+(asdf:operate 'asdf:load-op :changed-stream)
+#+END_SRC
+
+If you have problems, see the [[#support][support]] section, otherwise you may want to [[#runtests][run the tests]].
+
+** Ubunto
+
+#+BEGIN_SRC sh
+sudo apt-get install changed-stream
+#+END_SRC
+
+Once the installation is finished, the package is loadable using ASDF:
+
+#+BEGIN_SRC lisp
+(asdf:operate 'asdf:load-op :changed-stream)
+#+END_SRC
+
+If you have problems, see the [[#support][support]] section, otherwise you may want to [[#runtests][run the tests]].
+
+** Manual Installation
+
+In summary: Untar the package and then symlink the .asd files into a place where ASDF can find them. 
+
+  1. Untar the files where you want them to be.  On windows download the .zip and unzip it instead, it's the same files.
+  2. ASDF could be looking anywhere -- it depends on your setup.  Run this in your lisp repl to get a clue
+     as to where ASDF is seeking libraries[fn:: you might need to (require 'asdf) before running this example]:
+
+     #+BEGIN_SRC lisp
+        (mapcan #'funcall asdf:*default-source-registries*)
+     #+END_SRC
+
+  3. Symlink the .asd files to the source directory. If you use windows, [[http://bc.tech.coop/blog/041113.html][these instructions on symlink alternatives apply to you]].
+
+Once the files are in place, the package can be loaded with ASDF by:
+#+BEGIN_SRC lisp
+(asdf:operate 'asdf:load-op :changed-stream)
+#+END_SRC
+
+If you have problems, see the [[#support][support]] section.  If you don't have problems you may want to [[#runtests][run the tests]] anyway, because you can.
+
+** Running the Tests
+   :PROPERTIES:
+   :CUSTOM-ID:  runtests
+   :END:
+
+Once the system is loaded, it can be tested with asdf. 
+
+#+BEGIN_SRC lisp
+(asdf:operate 'asdf:test-op :changed-stream)
+#+END_SRC
+
+This should display something like the following. There should
+be *zero failures*, if you have failures see the [[#support][support]] section
+of this document.
+
+#+BEGIN_SRC sh
+   RUNNING CHANGED-STREAM TESTS...
+   CHANGED-STREAM TEST RESULTS: 
+        Tests: 71
+      Success: 71
+     Failures: 0
+#+END_SRC
+
+** Getting Support
+   :PROPERTIES:
+   :CUSTOM-ID:  support
+   :END:
+
+* Implementation
+
+* Tests 
+
+Lets display the test coverage properties, this needs some nice graphics of
+  * Scanning
+  * Peeking
+  * Seeking
+  * Back Seeking
+  * Back seek with reads
+  * Sequences 
+
+* License
+
+Changed-stream is distributed under [[http://opensource.org/licenses/lgpl-2.1.php][LGPL2]] License. 
+
+
+* TODO Make it Tanglable.
+* TODO package and release.
+* TODO Put version number in this file.
+* TODO Grab ASD descriptions from this file.
+* TODO Get an ebuild done.
+* TODO Get it onto quicklisp.
+* TODO Get a github account place to put this on.
+* TODO Link the tar and zip files into the manual.
+* TODO Populate the getting support part.
+* TODO Get integration with cl-test-grid
+https://github.com/cl-test-grid/cl-test-grid
