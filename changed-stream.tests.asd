@@ -5,4 +5,4 @@
   :description "Testing code for the changed-stream library"
   :licence "Public Domain"
   :depends-on (:changed-stream)
-  :components ((:file "test")))
+  :components ((:file "lisp2")))
