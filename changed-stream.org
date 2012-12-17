@@ -942,7 +942,7 @@ Changed-stream is distributed under [[http://opensource.org/licenses/lgpl-2.1.ph
 
 <<copyright>>
 
-(defsystem :changed-stream.tests
+(defsystem :changed-stream.test
   :name "changed-stream.test"
   :version "1.0.0"
   :author "Warren Wilkinson <warrenwilkinson@gmail.com>"
@@ -983,6 +983,7 @@ https://github.com/WarrenWilkinson/changed-stream
 ** DONE Put version number in this file.
 ** DONE Grab ASD descriptions from this file.
 
+** DONE Rename changed-stream.tests to changed-stream.test
 
 ** TODO package and release.
 ** TODO Get an ebuild done.
@@ -990,5 +991,4 @@ https://github.com/WarrenWilkinson/changed-stream
 ** TODO Get integration with cl-test-grid
 https://github.com/cl-test-grid/cl-test-grid
 
-
-** TODO Publish this as HTML and make it the projects webpage.
+** DONE Publish this as HTML and make it the projects webpage.
