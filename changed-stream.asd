@@ -25,7 +25,10 @@
   :name "changed-stream"
   :version "1.0.0"
   :author "Warren Wilkinson <warrenwilkinson@gmail.com>"
-  :description "A stream upon another stream that adds a change."
+  :license "lgpl2"
+  :description "A library for non-destructive changes to character streams."
+  :long-description "A library for non-destructive 'changes' to character streams. Specify 1) position of 'point', 2) # characters deleted at, 3) new string inserted at point."
+  :homepage "http://warrenwilkinson.ca/changed-stream"
   :components ((:file "changed-stream"))
   :in-order-to ((test-op (load-op changed-stream.test))))
   
