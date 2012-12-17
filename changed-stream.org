@@ -77,7 +77,7 @@ In this example, stream s remains unmodified except for file-position[fn:: Chang
   * The underlying stream must be at file-position 0 when the changed-stream is created. There is an assert to catch this.
   * Thread safety is your responsibility -- in particular don't change the file-position of the underlying stream, the changed-stream will give incorrect results and could cause errors.
   * unread-char has not been implemented (but peek-char has been)
-  * Read only. There are no writing operations allowed to the stream
+  * Read only, no stream writing operations have been implemented.
 
 * Installation
 ** Quick Lisp
@@ -967,7 +967,6 @@ Changed-stream is distributed under [[http://opensource.org/licenses/lgpl-2.1.ph
     :license "lgpl2"
     :description "A library for non-destructive changes to character streams."
     :long-description "A library for non-destructive 'changes' to character streams. Specify 1) position of 'point', 2) # characters deleted at, 3) new string inserted at point."
-    :homepage "http://warrenwilkinson.ca/changed-stream"
     :components ((:file "changed-stream"))
     :in-order-to ((test-op (load-op changed-stream.test))))
     
@@ -988,10 +987,11 @@ https://github.com/WarrenWilkinson/changed-stream
 
 ** DONE Rename changed-stream.tests to changed-stream.test
 
+** DONE Publish this as HTML and make it the projects webpage.
 ** TODO package and release.
-** TODO Get an ebuild done.
-** TODO Get it onto quicklisp.
-** TODO Get integration with cl-test-grid
+*** TODO Get an ebuild done.
+*** WAITING Get it onto quicklisp.
+*** TODO Get integration with cl-test-grid
 https://github.com/cl-test-grid/cl-test-grid
 
-** DONE Publish this as HTML and make it the projects webpage.
+
